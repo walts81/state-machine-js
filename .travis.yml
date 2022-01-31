@@ -1,0 +1,27 @@
+language: node_js
+node_js:
+  - 'lts/*'
+install:
+  - npm install
+jobs:
+  include:
+    - stage: Build and test
+      env:
+        global:
+          - NODE_ENV=development
+      script:
+        - npm run test:cov
+      after_success: npm run coverage
+    - stage: npm release
+      script: npm run build
+      deploy:
+        provider: npm
+        email: '$NPM_EMAIL'
+        api_key: '$NPM_TOKEN'
+        skip_cleanup: true
+        on:
+          tags: true
+branches:
+  only:
+    - master
+    - /^v[0-9]+.*$/

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "sourceMap": true,
+    "outDir": "./lib/",
+    "strict": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "noImplicitThis": false,
+    "allowJs": true,
+    "lib": ["dom", "es2015", "es2015.promise"]
+  },
+  "exclude": ["node_modules", "lib/**/*.ts", "lib/**/*.js"]
+}

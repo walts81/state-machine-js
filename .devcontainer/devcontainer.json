@@ -1,0 +1,37 @@
+// For format details, see https://aka.ms/vscode-remote/devcontainer.json or the definition README at
+// https://github.com/microsoft/vscode-dev-containers/tree/master/containers/typescript-node-lts
+{
+  "name": "Node.js & TypeScript",
+  "build": {
+    "dockerfile": "Dockerfile",
+    // Update 'VARIANT' to pick a Node version: 16, 14, 12.
+    // Append -bullseye or -buster to pin to an OS version.
+    // Use -bullseye variants on local on arm64/Apple Silicon.
+    "args": {
+      "VARIANT": "16-bullseye"
+    }
+  },
+
+  // Set *default* container specific settings.json values on container create.
+  "settings": {},
+
+  // Uncomment the next line if you want to publish any ports.
+  // "appPort": [],
+
+  // Uncomment the next line to run commands after the container is created.
+  // "postCreateCommand": "yarn install",
+
+  // Uncomment the next line to use a non-root user. On Linux, this will prevent
+  // new files getting created as root, but you may need to update the USER_UID
+  // and USER_GID in .devcontainer/Dockerfile to match your user if not 1000.
+  // "runArgs": [ "-u", "node" ],
+
+  // Add the IDs of extensions you want installed when the container is created in the array below.
+  "extensions": ["dbaeumer.vscode-eslint", "octref.vetur", "esbenp.prettier-vscode", "eamodio.gitlens"],
+  "remoteUser": "node",
+  "features": {
+    "docker-from-docker": "latest",
+    "git": "latest",
+    "azure-cli": "latest"
+  }
+}
