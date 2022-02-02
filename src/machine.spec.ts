@@ -32,8 +32,8 @@ describe('StateMachine', () => {
     it('should start at specified initial state', async () => {
       const machine = createMachine(true, false);
       await machine.start();
-      const currentState = machine.getCurrentState();
-      expect(currentState.name).to.eq('state1');
+      const currentState = machine.currentState;
+      expect(currentState).to.eq('state1');
     });
 
     it('should throw error when state already registered as initial', async () => {
@@ -50,27 +50,27 @@ describe('StateMachine', () => {
 
   describe('trigger', () => {
     it('should allow moving to state when previous state is in allowedFrom"', async () => {
-      const machine: any = createMachine(false, true);
-      machine.states[1].action = undefined;
+      const machine = createMachine(false, true);
+      (machine as any).states[1].action = undefined;
       await machine.start();
       await machine.trigger('state1');
       await machine.trigger('state2');
-      expect(machine.currentState?.name).to.eq('state2');
+      expect(machine.currentState).to.eq('state2');
     });
 
     it('should allow moving to state when previous state is null', async () => {
       const machine = createMachine(false, false);
       await machine.trigger('state1');
-      const currentState = machine.getCurrentState();
-      expect(currentState.name).to.eq('state1');
+      const currentState = machine.currentState;
+      expect(currentState).to.eq('state1');
     });
 
     it('should not allow moving to state when previous state is NOT in allowedFrom', async () => {
       const machine = createMachine(false, false);
       await machine.trigger('state1');
       await machine.trigger('state2');
-      const currentState = machine.getCurrentState();
-      expect(currentState.name).to.eq('state1');
+      const currentState = machine.currentState;
+      expect(currentState).to.eq('state1');
     });
 
     it('should return true when state advanced successfully', async () => {
@@ -101,8 +101,8 @@ describe('StateMachine', () => {
       const machine = createMachine(false, true, () => 'state3');
       await machine.trigger('state1');
       await machine.trigger('state2');
-      const currentState = machine.getCurrentState();
-      expect(currentState.name).to.eq('state3');
+      const currentState = machine.currentState;
+      expect(currentState).to.eq('state3');
     });
   });
 

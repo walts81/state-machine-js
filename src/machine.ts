@@ -3,8 +3,11 @@ import { createState, cloneState, State } from './state';
 export class StateMachine {
   constructor(public name: string) {}
 
+  get currentState() {
+    return this.currentStateObj?.name;
+  }
   private readonly states: State[] = [];
-  private currentState: any;
+  private currentStateObj: State | null = null;
   private initialState: string | undefined;
 
   registerState(state: State, setAsInitial?: boolean);
@@ -47,15 +50,14 @@ export class StateMachine {
   }
 
   canTrigger(stateName: string) {
-    const currentState = this.getCurrentState();
     const newState = this.getState(stateName);
-    return !!newState && (!currentState || newState.allowedFrom.some(x => x === currentState.name));
+    return !!newState && (!this.currentState || newState.allowedFrom.some(x => x === this.currentState));
   }
 
   async trigger(stateName: string) {
     if (!this.canTrigger(stateName)) return false;
     const currentState = this.getState(stateName);
-    this.currentState = currentState;
+    this.currentStateObj = currentState;
     const action: () => string = currentState.action as any;
     if (!!action) {
       const nextStateName = action();
@@ -68,10 +70,6 @@ export class StateMachine {
     if (!!this.initialState) {
       await this.trigger(this.initialState);
     }
-  }
-
-  getCurrentState(): State {
-    return cloneState(this.currentState);
   }
 
   getStates(): State[] {
