@@ -11,3 +11,12 @@ export const createState = (name: string, allowedFrom?: string[], action?: () =>
     action: action || (() => name),
   };
 };
+
+export const cloneState = (state: State): State => {
+  if (!state) return null as any;
+  return {
+    name: state.name,
+    allowedFrom: !!state.allowedFrom ? [...state.allowedFrom] : [],
+    action: state.action,
+  };
+};

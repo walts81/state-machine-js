@@ -1,11 +1,11 @@
-import { createState, State } from './state';
+import { createState, cloneState, State } from './state';
 
 export class StateMachine {
   constructor(public name: string) {}
 
-  readonly states: State[] = [];
-  currentState: State | null = null;
-  initialState: string | undefined;
+  private readonly states: State[] = [];
+  private currentState: any;
+  private initialState: string | undefined;
 
   registerState(state: State, setAsInitial?: boolean);
   registerState(name: string, setAsInitial?: boolean);
@@ -46,29 +46,41 @@ export class StateMachine {
     }
   }
 
-  canGotoState(toState: string) {
-    if (!this.currentState) return true;
-    const filtered = this.states.filter(x => x.name === toState);
-    const currentState: State = this.currentState as any;
-    return filtered.length > 0 && filtered[0].allowedFrom.some(x => x === currentState.name);
+  canTrigger(stateName: string) {
+    const currentState = this.getCurrentState();
+    const newState = this.getState(stateName);
+    return !!newState && (!currentState || newState.allowedFrom.some(x => x === currentState.name));
   }
 
-  async gotoState(toState: string) {
-    if (!this.canGotoState(toState)) return false;
-    const nextState = this.states.filter(x => x.name === toState)[0];
-    this.currentState = nextState;
-    const action: () => string = this.currentState.action as any;
+  async trigger(stateName: string) {
+    if (!this.canTrigger(stateName)) return false;
+    const currentState = this.getState(stateName);
+    this.currentState = currentState;
+    const action: () => string = currentState.action as any;
     if (!!action) {
-      const nextState = action();
-      const currentState: State = this.currentState as any;
-      if (!!nextState && nextState !== currentState.name) await this.gotoState(nextState);
+      const nextStateName = action();
+      if (!!nextStateName && nextStateName !== currentState.name) await this.trigger(nextStateName);
     }
     return true;
   }
 
   async start() {
     if (!!this.initialState) {
-      await this.gotoState(this.initialState);
+      await this.trigger(this.initialState);
     }
+  }
+
+  getCurrentState(): State {
+    return cloneState(this.currentState);
+  }
+
+  getStates(): State[] {
+    return this.states.map(cloneState);
+  }
+
+  private getState(stateName: string): State {
+    const states = this.getStates();
+    const filtered = states.filter(x => x.name === stateName);
+    return filtered.length > 0 ? filtered[0] : (null as any);
   }
 }

@@ -32,7 +32,8 @@ describe('StateMachine', () => {
     it('should start at specified initial state', async () => {
       const machine = createMachine(true, false);
       await machine.start();
-      expect(machine.currentState?.name).to.eq('state1');
+      const currentState = machine.getCurrentState();
+      expect(currentState.name).to.eq('state1');
     });
 
     it('should throw error when state already registered as initial', async () => {
@@ -47,39 +48,41 @@ describe('StateMachine', () => {
     });
   });
 
-  describe('gotoState', () => {
+  describe('trigger', () => {
     it('should allow moving to state when previous state is in allowedFrom"', async () => {
-      const machine = createMachine(false, true);
+      const machine: any = createMachine(false, true);
       machine.states[1].action = undefined;
       await machine.start();
-      await machine.gotoState('state1');
-      await machine.gotoState('state2');
+      await machine.trigger('state1');
+      await machine.trigger('state2');
       expect(machine.currentState?.name).to.eq('state2');
     });
 
     it('should allow moving to state when previous state is null', async () => {
       const machine = createMachine(false, false);
-      await machine.gotoState('state1');
-      expect(machine.currentState?.name).to.eq('state1');
+      await machine.trigger('state1');
+      const currentState = machine.getCurrentState();
+      expect(currentState.name).to.eq('state1');
     });
 
     it('should not allow moving to state when previous state is NOT in allowedFrom', async () => {
       const machine = createMachine(false, false);
-      await machine.gotoState('state1');
-      await machine.gotoState('state2');
-      expect(machine.currentState?.name).to.eq('state1');
+      await machine.trigger('state1');
+      await machine.trigger('state2');
+      const currentState = machine.getCurrentState();
+      expect(currentState.name).to.eq('state1');
     });
 
     it('should return true when state advanced successfully', async () => {
       const machine = createMachine(false, false);
-      const result = await machine.gotoState('state1');
+      const result = await machine.trigger('state1');
       expect(result).to.be.true;
     });
 
     it('should return false when state did NOT advance successfully', async () => {
       const machine = createMachine(false, false);
-      await machine.gotoState('state1');
-      const result = await machine.gotoState('state2');
+      await machine.trigger('state1');
+      const result = await machine.trigger('state2');
       expect(result).to.be.false;
     });
 
@@ -89,31 +92,38 @@ describe('StateMachine', () => {
         counter++;
         return '';
       });
-      await machine.gotoState('state1');
-      await machine.gotoState('state2');
+      await machine.trigger('state1');
+      await machine.trigger('state2');
       expect(counter).to.eq(1);
     });
 
     it(`should advance to state returned from state's registered action`, async () => {
       const machine = createMachine(false, true, () => 'state3');
-      await machine.gotoState('state1');
-      await machine.gotoState('state2');
-      expect(machine.currentState?.name).to.eq('state3');
+      await machine.trigger('state1');
+      await machine.trigger('state2');
+      const currentState = machine.getCurrentState();
+      expect(currentState.name).to.eq('state3');
     });
   });
 
-  describe('canGotoState', () => {
+  describe('canTrigger', () => {
+    it('should return false when state does not exist', () => {
+      const machine = createMachine(false, false);
+      const result = machine.canTrigger('state_not_exists');
+      expect(result).to.be.false;
+    });
+
     it('should return false when current state is NOT in allowedFrom', async () => {
       const machine = createMachine(false, false);
-      await machine.gotoState('state1');
-      const result = machine.canGotoState('state2');
+      await machine.trigger('state1');
+      const result = machine.canTrigger('state2');
       expect(result).to.be.false;
     });
 
     it('should return true when current state is in allowedFrom', async () => {
       const machine = createMachine(false, true);
-      await machine.gotoState('state1');
-      const result = machine.canGotoState('state2');
+      await machine.trigger('state1');
+      const result = machine.canTrigger('state2');
       expect(result).to.be.true;
     });
   });
