@@ -4,14 +4,14 @@ import { createState } from './state';
 import { StateMachine } from './machine';
 
 describe('StateMachine', () => {
-  const createMachine = (setState1Initial: boolean, allowState2: boolean, action?: () => string) => {
+  const createMachine = (setState1Initial: boolean, allowState2: boolean, action?: () => Promise<string>) => {
     const machine = new StateMachine('test');
     const allowedFrom = allowState2 ? ['state1'] : [];
     machine.registerState('state1', setState1Initial);
     machine.registerState('state2', allowedFrom, action);
     machine.registerState('state3', ['state2']);
-    machine.registerState('state4', () => '');
-    machine.registerState('state5', () => '', false);
+    machine.registerState('state4', () => Promise.resolve(''));
+    machine.registerState('state5', () => Promise.resolve(''), false);
     machine.registerState('state6', undefined, undefined, false);
     machine.registerState(createState('state7'));
     return machine;
@@ -90,7 +90,7 @@ describe('StateMachine', () => {
       let counter = 0;
       const machine = createMachine(false, true, () => {
         counter++;
-        return '';
+        return Promise.resolve('');
       });
       await machine.trigger('state1');
       await machine.trigger('state2');
@@ -98,7 +98,7 @@ describe('StateMachine', () => {
     });
 
     it(`should advance to state returned from state's registered action`, async () => {
-      const machine = createMachine(false, true, () => 'state3');
+      const machine = createMachine(false, true, () => Promise.resolve('state3'));
       await machine.trigger('state1');
       await machine.trigger('state2');
       const currentState = machine.currentState;

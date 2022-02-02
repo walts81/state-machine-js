@@ -13,13 +13,13 @@ export class StateMachine {
   registerState(state: State, setAsInitial?: boolean);
   registerState(name: string, setAsInitial?: boolean);
   registerState(name: string, allowedFrom?: string[], setAsInitial?: boolean);
-  registerState(name: string, action?: () => string, setAsInitial?: boolean);
-  registerState(name: string, allowedFrom?: string[], action?: () => string, setAsInitial?: boolean);
+  registerState(name: string, action?: () => Promise<string>, setAsInitial?: boolean);
+  registerState(name: string, allowedFrom?: string[], action?: () => Promise<string>, setAsInitial?: boolean);
   registerState(stateOrName: State | string, arg2?: any, arg3?: any, arg4?: boolean) {
     let state: State = stateOrName as any;
     let initial = false;
-    let actionToUse: () => string = arg3 as any;
     if (typeof stateOrName === 'string') {
+      let actionToUse: () => Promise<string> = undefined as any;
       let allowedFrom: string[] = undefined as any;
       if (typeof arg2 === 'boolean') {
         initial = arg2 === true;
@@ -58,9 +58,9 @@ export class StateMachine {
     if (!this.canTrigger(stateName)) return false;
     const currentState = this.getState(stateName);
     this.currentStateObj = currentState;
-    const action: () => string = currentState.action as any;
+    const action: () => Promise<string> = currentState.action as any;
     if (!!action) {
-      const nextStateName = action();
+      const nextStateName = await action();
       if (!!nextStateName && nextStateName !== currentState.name) await this.trigger(nextStateName);
     }
     return true;

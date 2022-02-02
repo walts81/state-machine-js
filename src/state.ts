@@ -1,14 +1,14 @@
 export interface State {
   name: string;
   allowedFrom: string[];
-  action?: () => string;
+  action?: () => Promise<string>;
 }
 
-export const createState = (name: string, allowedFrom?: string[], action?: () => string) => {
+export const createState = (name: string, allowedFrom?: string[], action?: () => Promise<string>) => {
   return {
     name,
     allowedFrom: allowedFrom || [],
-    action: action || (() => name),
+    action: action || (() => Promise.resolve(name)),
   };
 };
 
