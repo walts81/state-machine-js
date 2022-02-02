@@ -10,7 +10,7 @@ describe('StateMachine', () => {
     machine.registerState('state1', setState1Initial);
     machine.registerState('state2', allowedFrom, action);
     machine.registerState('state3', ['state2']);
-    machine.registerState('state4', () => Promise.resolve(''));
+    machine.registerState('state4', ['state3'], () => Promise.resolve(''));
     machine.registerState('state5', () => Promise.resolve(''), false);
     machine.registerState('state6', undefined, undefined, false);
     machine.registerState(createState('state7'));
@@ -104,6 +104,18 @@ describe('StateMachine', () => {
       const currentState = machine.currentState;
       expect(currentState).to.eq('state3');
     });
+
+    it(`should throw error when a state's action returns an invalid state`, async () => {
+      const machine = createMachine(false, true, () => Promise.resolve('state4'));
+      await machine.trigger('state1');
+      let errorThrown = false;
+      try {
+        await machine.trigger('state2');
+      } catch {
+        errorThrown = true;
+      }
+      expect(errorThrown).to.be.true;
+    });
   });
 
   describe('canTrigger', () => {
@@ -125,6 +137,19 @@ describe('StateMachine', () => {
       await machine.trigger('state1');
       const result = machine.canTrigger('state2');
       expect(result).to.be.true;
+    });
+  });
+
+  describe('getStates', () => {
+    it('should create a deep copy of states', () => {
+      const machine = createMachine(false, false);
+      const states = (machine as any).states;
+      const result = machine.getStates();
+      expect(result).not.to.eq(states);
+      for (let i = 0; i < result.length; i++) {
+        expect(result[i]).not.to.eq(states[i]);
+        expect(result[i]).to.eql(states[i]);
+      }
     });
   });
 });

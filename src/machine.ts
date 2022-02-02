@@ -12,25 +12,32 @@ export class StateMachine {
 
   registerState(state: State, setAsInitial?: boolean);
   registerState(name: string, setAsInitial?: boolean);
-  registerState(name: string, allowedFrom?: string[], setAsInitial?: boolean);
-  registerState(name: string, action?: () => Promise<string>, setAsInitial?: boolean);
-  registerState(name: string, allowedFrom?: string[], action?: () => Promise<string>, setAsInitial?: boolean);
+  registerState(name: string, allowedFrom?: string[] | 'any', setAsInitial?: boolean);
+  registerState(name: string, action?: (currentState: string) => Promise<string>, setAsInitial?: boolean);
+  registerState(
+    name: string,
+    allowedFrom?: string[] | 'any',
+    action?: (currentState: string) => Promise<string>,
+    setAsInitial?: boolean
+  );
   registerState(stateOrName: State | string, arg2?: any, arg3?: any, arg4?: boolean) {
     let state: State = stateOrName as any;
     let initial = false;
     if (typeof stateOrName === 'string') {
-      let actionToUse: () => Promise<string> = undefined as any;
-      let allowedFrom: string[] = undefined as any;
-      if (typeof arg2 === 'boolean') {
+      let actionToUse: (currentState: string) => Promise<string> = undefined as any;
+      let allowedFrom: any = 'any';
+      const arg2Type = typeof arg2;
+      const arg3Type = typeof arg3;
+      if (arg2Type === 'boolean') {
         initial = arg2 === true;
-      } else if (typeof arg2 === 'function') {
+      } else if (arg2Type === 'function') {
         actionToUse = arg2;
-      } else if (typeof arg2 === 'object') {
+      } else if (arg2Type === 'object' || arg2Type === 'string') {
         allowedFrom = arg2;
       }
-      if (typeof arg3 === 'boolean') {
+      if (arg3Type === 'boolean') {
         initial = arg3 === true;
-      } else if (typeof arg3 === 'function') {
+      } else if (arg3Type === 'function') {
         actionToUse = arg3;
       }
       if (typeof arg4 === 'boolean') {
@@ -51,17 +58,27 @@ export class StateMachine {
 
   canTrigger(stateName: string) {
     const newState = this.getState(stateName);
-    return !!newState && (!this.currentState || newState.allowedFrom.some(x => x === this.currentState));
+    const newStateExists = !!newState;
+    const currentState = this.currentState;
+    return (
+      newStateExists &&
+      (!currentState || newState.allowedFrom === 'any' || newState.allowedFrom.some(x => x === currentState))
+    );
   }
 
   async trigger(stateName: string) {
     if (!this.canTrigger(stateName)) return false;
-    const currentState = this.getState(stateName);
-    this.currentStateObj = currentState;
-    const action: () => Promise<string> = currentState.action as any;
+    const stateObj = this.getState(stateName);
+    const currentState: any = this.currentState;
+    this.currentStateObj = stateObj;
+    const action: (x: string) => Promise<string> = stateObj.action as any;
     if (!!action) {
-      const nextStateName = await action();
-      if (!!nextStateName && nextStateName !== currentState.name) await this.trigger(nextStateName);
+      const nextStateName = await action(currentState);
+      if (!!nextStateName && nextStateName !== stateObj.name) {
+        const success = await this.trigger(nextStateName);
+        if (!success)
+          throw new Error(`Cannot transition to state '${nextStateName}' from current state of '${currentState}'`);
+      }
     }
     return true;
   }
@@ -77,7 +94,7 @@ export class StateMachine {
   }
 
   private getState(stateName: string): State {
-    const states = this.getStates();
+    const states = [...this.states];
     const filtered = states.filter(x => x.name === stateName);
     return filtered.length > 0 ? filtered[0] : (null as any);
   }

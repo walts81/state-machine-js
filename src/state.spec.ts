@@ -13,19 +13,30 @@ describe('cloneState', () => {
     expect(result).to.be.null;
   });
 
-  it(`should use empty array for allowedFrom if original object's is null`, () => {
+  it(`should use 'any' for allowedFrom if original object's is null`, () => {
     const result = cloneState({
       name: 'test',
       allowedFrom: null as any,
     });
-    expect(result.allowedFrom).to.eql([]);
+    expect(result.allowedFrom).to.eq('any');
   });
 
-  it(`should use empty array for allowedFrom if original object's is undefined`, () => {
+  it(`should use 'any' for allowedFrom if original object's is undefined`, () => {
     const result = cloneState({
       name: 'test',
       allowedFrom: undefined as any,
     });
-    expect(result.allowedFrom).to.eql([]);
+    expect(result.allowedFrom).to.eq('any');
+  });
+
+  it('should use a shallow copy of the allowedFrom array', () => {
+    const allowedFrom = ['test1', 'test2', 'test3'];
+    const result = cloneState({
+      name: 'test',
+      allowedFrom,
+    });
+    (result.allowedFrom as any).push('test4');
+    expect(result.allowedFrom.length).to.eq(4);
+    expect(allowedFrom.length).to.eq(3);
   });
 });
