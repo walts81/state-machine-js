@@ -116,6 +116,19 @@ describe('StateMachine', () => {
       }
       expect(errorThrown).to.be.true;
     });
+
+    it('should use specified args to run the action', async () => {
+      const machine = createMachine(false, false);
+      const arg1 = { data: 'test-1' };
+      const arg2 = { data: 'test-2' };
+      let calledWithPayload = false;
+      machine.registerState('test', (s, a, b) => {
+        calledWithPayload = a === arg1 && b === arg2;
+        return Promise.resolve('');
+      });
+      await machine.trigger('test', arg1, arg2);
+      expect(calledWithPayload).to.be.true;
+    });
   });
 
   describe('canTrigger', () => {

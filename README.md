@@ -24,19 +24,24 @@ interface State {
   name: string;
 
   /***
-   * The states which must be active in order to transition to this state.
-   * This can be an array of state names or the keyword 'any' if this state can be transitioned from any state.
-   * All states can be transitioned to (regardless of what is indicated here) if the currentState of the machine is
-   *   null (which would be the case if no state is registered as an initial state for the machine)
+   * The allowed states which this state can be triggered from.
+   *
+   * This can be an array of state names or the keyword 'any' if it can be triggered from any state.
+   * All states can be triggered (regardless of what is indicated here) if the current state of the
+   *   machine is null (which would be the case if no state is registered as an initial state for
+   *   the machine or if the machine has not been "started")
    */
   allowedFrom: string[] | 'any';
 
   /***
    * Optional action to run when the state becomes active.
-   * Returns a string promise where the string is the next state to trigger when the action is complete.
-   * You can return null, undefined, empty string or the same state name to remain on the same state
+   * The action will get passed the current state as well as any args passed to the machine's trigger function.
+   *
+   * Returns a promise that resolves the name of the next state to trigger.
+   *   If a state name is resolved from the promise, it will automatically be triggered after the action completes.
+   *   Otherwise you can return null, undefined, empty string or the same state name to remain on the same state
    */
-  action?: (currentState: string) => Promise<string>;
+  action?: (currentState: string, ...args: any[]) => Promise<string>;
 }
 ```
 
@@ -83,7 +88,7 @@ machine.registerState(
   true
 );
 
-machine.registerState('login', ['logout'], () => {
+machine.registerState('login', ['logout'], (currentState: string, username: string, password: string) => {
   // login implementation here
   return Promise.resolve('active');
 });
@@ -97,4 +102,12 @@ machine.registerState('login', ['logout'], () => {
  * for triggering the initial state.
  */
 await machine.start();
+
+/***
+ * You can then use the machine.trigger() function to trigger different states.
+ *
+ * An error will be thrown if you attempt to trigger a function from a state that
+ * is not listed in the "allowedFrom" of the state you are attempting to trigger
+ */
+await machine.trigger('login', 'test-user', 'test-password');
 ```
