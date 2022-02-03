@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import 'mocha';
-import { cloneState } from './state';
+import { cloneState, createState } from './state';
 
 describe('cloneState', () => {
   it('should return null if null passed in', () => {
@@ -38,5 +38,13 @@ describe('cloneState', () => {
     (result.allowedFrom as any).push('test4');
     expect(result.allowedFrom.length).to.eq(4);
     expect(allowedFrom.length).to.eq(3);
+  });
+});
+
+describe('createState', () => {
+  it('should use promise.resolve(true) when no canTrigger is passed in', async () => {
+    const state = createState('test');
+    const result = await (state as any).canTrigger(undefined as any);
+    expect(result).to.be.true;
   });
 });

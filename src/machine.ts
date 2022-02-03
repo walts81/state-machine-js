@@ -1,88 +1,114 @@
 import { createState, cloneState } from './state';
-import { State, IStateMachine } from './interfaces';
+import { AllowedFrom, State, StateAction, StateActionCanTrigger, IStateMachine } from './interfaces';
 
-export class StateMachine implements IStateMachine {
-  constructor(public name: string) {}
+export class StateMachine<T extends object = any> implements IStateMachine<T> {
+  constructor(public name: string, data?: T) {
+    this.machineData = data || ({} as any);
+  }
 
   get currentState() {
     return this.currentStateObj?.name || '';
   }
+  get currentStateObject() {
+    return !!this.currentStateObj ? cloneState(this.currentStateObj) : null;
+  }
+  get data() {
+    return JSON.parse(JSON.stringify(this.machineData));
+  }
   private readonly states: State[] = [];
   private currentStateObj: State | null = null;
   private initialState: string | undefined;
+  private machineData;
 
-  registerState(state: State, setAsInitial?: boolean);
-  registerState(name: string, setAsInitial?: boolean);
-  registerState(name: string, allowedFrom?: string[] | 'any', setAsInitial?: boolean);
-  registerState(
-    name: string,
-    action?: (machine: IStateMachine, ...args: any[]) => Promise<string>,
-    setAsInitial?: boolean
-  );
-  registerState(
-    name: string,
-    allowedFrom?: string[] | 'any',
-    action?: (machine: IStateMachine, ...args: any[]) => Promise<string>,
-    setAsInitial?: boolean
-  );
-  registerState(stateOrName: State | string, arg2?: any, arg3?: any, arg4?: boolean) {
-    let state: State = stateOrName as any;
-    let initial = false;
+  registerState(state: State<T>, setAsInitial?: boolean): void;
+  registerState(stateName: string, setAsInitial?: boolean): void;
+  registerState(stateName: string, allowedFrom?: AllowedFrom, setAsInitial?: boolean): void;
+  registerState<T extends object = any>(
+    stateOrName: State<T> | string,
+    arg2?: AllowedFrom | boolean,
+    arg3?: boolean
+  ): void {
+    let state = stateOrName as State<T>;
+    let setAsInitial = arg2 === true;
     if (typeof stateOrName === 'string') {
-      let actionToUse: (machine: IStateMachine, ...args: any[]) => Promise<string> = undefined as any;
-      let allowedFrom: any = 'any';
-      const arg2Type = typeof arg2;
-      const arg3Type = typeof arg3;
-      if (arg2Type === 'boolean') {
-        initial = arg2 === true;
-      } else if (arg2Type === 'function') {
-        actionToUse = arg2;
-      } else if (arg2Type === 'object' || arg2Type === 'string') {
-        allowedFrom = arg2;
-      }
-      if (arg3Type === 'boolean') {
-        initial = arg3 === true;
-      } else if (arg3Type === 'function') {
-        actionToUse = arg3;
-      }
-      if (typeof arg4 === 'boolean') {
-        initial = arg4 === true;
-      }
-      state = createState(stateOrName, allowedFrom, actionToUse);
-    } else {
-      initial = arg2 === true;
+      const allowedFrom: any = Array.isArray(arg2) || arg2 === 'any' ? arg2 : undefined;
+      state = createState<T>(stateOrName, allowedFrom);
+      if (typeof arg3 === 'boolean') setAsInitial = arg3 === true;
     }
-    if (this.states.some(x => x.name === state.name)) throw new Error(`State '${state.name}' is already registered`);
-    this.states.push(state);
-    if (initial) {
-      if (!!this.initialState)
-        throw new Error(`State '${this.initialState}' is already registered as the initial state`);
-      this.initialState = state.name;
-    }
+    this.registerStateInternal(state, setAsInitial);
   }
 
-  canTrigger(stateName: string) {
+  registerStateWithAction(stateName: string, action: StateAction<T>, setAsInitial?: boolean): void;
+  registerStateWithAction(
+    stateName: string,
+    action: StateAction<T>,
+    canTrigger: StateActionCanTrigger,
+    setAsInitial?: boolean
+  ): void;
+  registerStateWithAction(
+    stateName: string,
+    allowedFrom: AllowedFrom,
+    action: StateAction<T>,
+    setAsInitial?: boolean
+  ): void;
+  registerStateWithAction(
+    stateName: string,
+    allowedFrom: AllowedFrom,
+    action: StateAction<T>,
+    canTrigger: StateActionCanTrigger,
+    setAsInitial?: boolean
+  ): void;
+  registerStateWithAction(
+    stateName: string,
+    arg2: AllowedFrom | StateAction<T>,
+    arg3?: StateAction<T> | StateActionCanTrigger | boolean,
+    arg4?: StateActionCanTrigger | boolean,
+    arg5?: boolean
+  ): void {
+    const allowedFrom: any = typeof arg2 === 'function' ? undefined : arg2;
+    const action: any = typeof arg2 === 'function' ? arg2 : arg3;
+    const canTrigger: any =
+      typeof arg2 === 'function' && typeof arg3 === 'function' ? arg3 : typeof arg4 === 'function' ? arg4 : undefined;
+    const state = createState(stateName, allowedFrom, action, canTrigger);
+    let setAsInitial = arg3 === true;
+    if (typeof arg4 === 'boolean') setAsInitial = arg4 === true;
+    else if (typeof arg5 === 'boolean') setAsInitial = arg5 === true;
+    this.registerStateInternal(state, setAsInitial);
+  }
+
+  async canTrigger(stateName: string, ...args: any[]) {
     const newState = this.getState(stateName);
     const newStateExists = !!newState;
+    if (!newStateExists) return false;
+
     const currentState = this.currentState;
+    const canTriggerAction = newState.canTrigger;
+    let ok = true;
+    if (!!canTriggerAction) {
+      ok = await canTriggerAction({ machine: this }, ...args);
+    }
     return (
-      newStateExists &&
-      (!currentState || newState.allowedFrom === 'any' || newState.allowedFrom.some(x => x === currentState))
+      ok && (!currentState || newState.allowedFrom === 'any' || newState.allowedFrom.some(x => x === currentState))
     );
   }
 
   async trigger(stateName: string, ...args: any[]) {
-    if (!this.canTrigger(stateName)) return false;
+    const ok = await this.canTrigger(stateName, ...args);
+    if (!ok) return false;
+
     const stateObj = this.getState(stateName);
-    const currentState: any = this.currentState;
+    const previousState: any = this.currentState;
     this.currentStateObj = stateObj;
-    const action: (machine: IStateMachine, ...args: any[]) => Promise<string> = stateObj.action as any;
+    const action: StateAction = stateObj.action as any;
     if (!!action) {
-      const nextStateName = await action(this, ...args);
-      if (!!nextStateName && nextStateName !== stateObj.name) {
-        const success = await this.trigger(nextStateName);
+      const result = await action({ machine: this, previousState }, ...args);
+      if (!!result.data) {
+        this.machineData = result.data;
+      }
+      if (!!result.nextState && result.nextState !== stateObj.name) {
+        const success = await this.trigger(result.nextState);
         if (!success)
-          throw new Error(`Cannot transition to state '${nextStateName}' from current state of '${currentState}'`);
+          throw new Error(`Cannot transition to state '${result.nextState}' from current state of '${previousState}'`);
       }
     }
     return true;
@@ -96,6 +122,16 @@ export class StateMachine implements IStateMachine {
 
   getStates(): State[] {
     return this.states.map(cloneState);
+  }
+
+  private registerStateInternal(state: State, setAsInitial: boolean) {
+    if (this.states.some(x => x.name === state.name)) throw new Error(`State '${state.name}' is already registered`);
+    this.states.push(state);
+    if (setAsInitial) {
+      if (!!this.initialState)
+        throw new Error(`State '${this.initialState}' is already registered as the initial state`);
+      this.initialState = state.name;
+    }
   }
 
   private getState(stateName: string): State {
