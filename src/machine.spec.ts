@@ -2,9 +2,14 @@ import { expect } from 'chai';
 import 'mocha';
 import { createState } from './state';
 import { StateMachine } from './machine';
+import { IStateMachine } from './interfaces';
 
 describe('StateMachine', () => {
-  const createMachine = (setState1Initial: boolean, allowState2: boolean, action?: () => Promise<string>) => {
+  const createMachine = (
+    setState1Initial: boolean,
+    allowState2: boolean,
+    action?: (m: IStateMachine, ...args: any[]) => Promise<string>
+  ) => {
     const machine = new StateMachine('test');
     const allowedFrom = allowState2 ? ['state1'] : [];
     machine.registerState('state1', setState1Initial);
@@ -88,13 +93,16 @@ describe('StateMachine', () => {
 
     it('should run registered action when advancing state', async () => {
       let counter = 0;
-      const machine = createMachine(false, true, () => {
+      let calledWithMachine = false;
+      const machine = createMachine(false, true, m => {
         counter++;
+        calledWithMachine = m === machine;
         return Promise.resolve('');
       });
       await machine.trigger('state1');
       await machine.trigger('state2');
       expect(counter).to.eq(1);
+      expect(calledWithMachine).to.be.true;
     });
 
     it(`should advance to state returned from state's registered action`, async () => {

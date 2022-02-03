@@ -1,10 +1,11 @@
-import { createState, cloneState, State } from './state';
+import { createState, cloneState } from './state';
+import { State, IStateMachine } from './interfaces';
 
-export class StateMachine {
+export class StateMachine implements IStateMachine {
   constructor(public name: string) {}
 
   get currentState() {
-    return this.currentStateObj?.name;
+    return this.currentStateObj?.name || '';
   }
   private readonly states: State[] = [];
   private currentStateObj: State | null = null;
@@ -15,20 +16,20 @@ export class StateMachine {
   registerState(name: string, allowedFrom?: string[] | 'any', setAsInitial?: boolean);
   registerState(
     name: string,
-    action?: (currentState: string, ...args: any[]) => Promise<string>,
+    action?: (machine: IStateMachine, ...args: any[]) => Promise<string>,
     setAsInitial?: boolean
   );
   registerState(
     name: string,
     allowedFrom?: string[] | 'any',
-    action?: (currentState: string, ...args: any[]) => Promise<string>,
+    action?: (machine: IStateMachine, ...args: any[]) => Promise<string>,
     setAsInitial?: boolean
   );
   registerState(stateOrName: State | string, arg2?: any, arg3?: any, arg4?: boolean) {
     let state: State = stateOrName as any;
     let initial = false;
     if (typeof stateOrName === 'string') {
-      let actionToUse: (currentState: string, ...args: any[]) => Promise<string> = undefined as any;
+      let actionToUse: (machine: IStateMachine, ...args: any[]) => Promise<string> = undefined as any;
       let allowedFrom: any = 'any';
       const arg2Type = typeof arg2;
       const arg3Type = typeof arg3;
@@ -75,9 +76,9 @@ export class StateMachine {
     const stateObj = this.getState(stateName);
     const currentState: any = this.currentState;
     this.currentStateObj = stateObj;
-    const action: (x: string, ...args: any[]) => Promise<string> = stateObj.action as any;
+    const action: (machine: IStateMachine, ...args: any[]) => Promise<string> = stateObj.action as any;
     if (!!action) {
-      const nextStateName = await action(currentState, ...args);
+      const nextStateName = await action(this, ...args);
       if (!!nextStateName && nextStateName !== stateObj.name) {
         const success = await this.trigger(nextStateName);
         if (!success)

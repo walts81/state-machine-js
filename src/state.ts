@@ -1,13 +1,9 @@
-export interface State {
-  name: string;
-  allowedFrom: string[] | 'any';
-  action?: (currentState: string, ...args: any[]) => Promise<string>;
-}
+import { State, IStateMachine } from './interfaces';
 
 export const createState = (
   name: string,
   allowedFrom?: string[] | 'any',
-  action?: (currentState: string, ...args: any[]) => Promise<string>
+  action?: (machine: IStateMachine, ...args: any[]) => Promise<string>
 ) => {
   return {
     name,

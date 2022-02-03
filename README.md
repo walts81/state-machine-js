@@ -35,13 +35,16 @@ interface State {
 
   /***
    * Optional action to run when the state becomes active.
-   * The action will get passed the current state as well as any args passed to the machine's trigger function.
+   * The action will get passed a reference to the machine as well as any
+   *   args passed to the machine's trigger function.
    *
    * Returns a promise that resolves the name of the next state to trigger.
-   *   If a state name is resolved from the promise, it will automatically be triggered after the action completes.
-   *   Otherwise you can return null, undefined, empty string or the same state name to remain on the same state
+   *   If a state name is resolved from the promise, it will automatically be
+   *     triggered after the action completes.
+   *   Otherwise you can return null, undefined, empty string or the same state
+   *     name to remain on the same state
    */
-  action?: (currentState: string, ...args: any[]) => Promise<string>;
+  action?: (machine: IStateMachine, ...args: any[]) => Promise<string>;
 }
 ```
 
@@ -79,8 +82,11 @@ machine.registerState('active', () => {
 
 machine.registerState(
   'logout',
-  currentState => {
-    if (!!currentState) {
+  ['active', 'idle', 'login']
+  m => {
+    // if coming from login state, it was because login failed
+    // so no need to perform logout logic
+    if (!!m.currentState && m.currentState !== 'login') {
       // logout implementation here
     }
     return Promise.resolve('');
@@ -88,18 +94,19 @@ machine.registerState(
   true
 );
 
-machine.registerState('login', ['logout'], (currentState: string, username: string, password: string) => {
+machine.registerState('login', ['logout'], (m: IStateMachine, username: string, password: string) => {
   // login implementation here
-  return Promise.resolve('active');
+  const loginSuccess = password === 'password'; // <-- do real login here
+  return loginSuccess ? Promise.resolve('active') : Promise.resolve('logout');
 });
 
 /***
  * This will "start" the machine and trigger whatever state is
- * registered as the initial state (in this case "logout").
+ *   registered as the initial state (in this case "logout").
  *
  * If no state is registered as the initial state, this effectively does nothing.
  * The machine would still function properly without it but you would be responsible
- * for triggering the initial state.
+ *   for triggering the initial state.
  */
 await machine.start();
 
@@ -107,7 +114,7 @@ await machine.start();
  * You can then use the machine.trigger() function to trigger different states.
  *
  * An error will be thrown if you attempt to trigger a function from a state that
- * is not listed in the "allowedFrom" of the state you are attempting to trigger
+ *   is not listed in the "allowedFrom" of the state you are attempting to trigger
  */
 await machine.trigger('login', 'test-user', 'test-password');
 ```
