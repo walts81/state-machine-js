@@ -16,23 +16,19 @@ export class StateMachine<T = any> implements IStateMachine<T> {
   get data() {
     return this.machineData;
   }
-  private readonly states: State[] = [];
-  private currentStateObj: State | null = null;
+  private readonly states: State<T>[] = [];
+  private currentStateObj: State<T> | null = null;
   private initialState: string | undefined;
   private machineData: T;
 
   registerState(state: State<T>, setAsInitial?: boolean): void;
   registerState(stateName: string, setAsInitial?: boolean): void;
   registerState(stateName: string, allowedFrom?: AllowedFrom, setAsInitial?: boolean): void;
-  registerState<T extends object = any>(
-    stateOrName: State<T> | string,
-    arg2?: AllowedFrom | boolean,
-    arg3?: boolean
-  ): void {
+  registerState(stateOrName: State<T> | string, arg2?: AllowedFrom | boolean, arg3?: boolean): void {
     let state = stateOrName as State<T>;
     let setAsInitial = arg2 === true;
     if (typeof stateOrName === 'string') {
-      const allowedFrom: any = Array.isArray(arg2) || arg2 === 'any' ? arg2 : undefined;
+      const allowedFrom: any = typeof arg2 === 'boolean' ? undefined : arg2;
       state = createState<T>(stateOrName, allowedFrom);
       if (typeof arg3 === 'boolean') setAsInitial = arg3 === true;
     }
@@ -43,7 +39,7 @@ export class StateMachine<T = any> implements IStateMachine<T> {
   registerStateWithAction(
     stateName: string,
     action: StateAction<T>,
-    canTrigger: StateActionCanTrigger,
+    canTrigger: StateActionCanTrigger<T>,
     setAsInitial?: boolean
   ): void;
   registerStateWithAction(
@@ -56,14 +52,14 @@ export class StateMachine<T = any> implements IStateMachine<T> {
     stateName: string,
     allowedFrom: AllowedFrom,
     action: StateAction<T>,
-    canTrigger: StateActionCanTrigger,
+    canTrigger: StateActionCanTrigger<T>,
     setAsInitial?: boolean
   ): void;
   registerStateWithAction(
     stateName: string,
     arg2: AllowedFrom | StateAction<T>,
-    arg3?: StateAction<T> | StateActionCanTrigger | boolean,
-    arg4?: StateActionCanTrigger | boolean,
+    arg3?: StateAction<T> | StateActionCanTrigger<T> | boolean,
+    arg4?: StateActionCanTrigger<T> | boolean,
     arg5?: boolean
   ): void {
     const allowedFrom: any = typeof arg2 === 'function' ? undefined : arg2;
@@ -84,13 +80,13 @@ export class StateMachine<T = any> implements IStateMachine<T> {
 
     const currentState = this.currentState;
     const canTriggerAction = newState.canTrigger;
-    let ok = true;
     if (!!canTriggerAction) {
-      ok = await canTriggerAction({ machine: this }, ...args);
+      const ok = await canTriggerAction({ machine: this }, ...args);
+      if (!ok) return false;
     }
-    return (
-      ok && (!currentState || newState.allowedFrom === 'any' || newState.allowedFrom.some(x => x === currentState))
-    );
+    if (newState.allowedFrom === 'none') return !currentState;
+    if (newState.allowedFrom === 'any') return true;
+    return !currentState || newState.allowedFrom.some(x => x === currentState);
   }
 
   async trigger(stateName: string, ...args: any[]) {
@@ -100,7 +96,7 @@ export class StateMachine<T = any> implements IStateMachine<T> {
     const stateObj = this.getState(stateName);
     const previousState: any = this.currentState;
     this.currentStateObj = stateObj;
-    const action: StateAction = stateObj.action as any;
+    const action: StateAction<T> = stateObj.action as any;
     if (!!action) {
       const result = await action({ machine: this, previousState }, ...args);
       if (!!result.data) {
@@ -121,7 +117,7 @@ export class StateMachine<T = any> implements IStateMachine<T> {
     }
   }
 
-  getStates(): State[] {
+  getStates(): State<T>[] {
     return this.states.map(cloneState);
   }
 
@@ -129,7 +125,7 @@ export class StateMachine<T = any> implements IStateMachine<T> {
     this.machineData = JSON.parse(JSON.stringify(data));
   }
 
-  private registerStateInternal(state: State, setAsInitial: boolean) {
+  private registerStateInternal(state: State<T>, setAsInitial: boolean) {
     if (this.states.some(x => x.name === state.name)) throw new Error(`State '${state.name}' is already registered`);
     this.states.push(state);
     if (setAsInitial) {
@@ -139,7 +135,7 @@ export class StateMachine<T = any> implements IStateMachine<T> {
     }
   }
 
-  private getState(stateName: string): State {
+  private getState(stateName: string): State<T> {
     const states = [...this.states];
     const filtered = states.filter(x => x.name === stateName);
     return filtered.length > 0 ? filtered[0] : (null as any);

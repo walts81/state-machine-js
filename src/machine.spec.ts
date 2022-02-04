@@ -38,7 +38,7 @@ describe('StateMachine', () => {
       () => Promise.resolve(false),
       false
     );
-    machine.registerState(createState('state12'));
+    machine.registerState(createState('state_from_none', 'none'));
     return machine;
   };
 
@@ -96,6 +96,13 @@ describe('StateMachine', () => {
       await machine.trigger('state2');
       const currentState = machine.currentState;
       expect(currentState).to.eq('state1');
+    });
+
+    it('should not allow moving to state registered with allowedFrom none', async () => {
+      const machine = createMachine(true, false);
+      await machine.start();
+      const result = await machine.trigger('state_from_none');
+      expect(result).to.be.false;
     });
 
     it('should return true when state advanced successfully', async () => {
