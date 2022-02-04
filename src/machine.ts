@@ -1,9 +1,10 @@
 import { createState, cloneState } from './state';
 import { AllowedFrom, State, StateAction, StateActionCanTrigger, IStateMachine } from './interfaces';
 
-export class StateMachine<T extends object = any> implements IStateMachine<T> {
+export class StateMachine<T = any> implements IStateMachine<T> {
   constructor(public name: string, data?: T) {
-    this.machineData = data || ({} as any);
+    const dataToUse = data || ({} as any);
+    this.mapData(dataToUse);
   }
 
   get currentState() {
@@ -13,12 +14,12 @@ export class StateMachine<T extends object = any> implements IStateMachine<T> {
     return !!this.currentStateObj ? cloneState(this.currentStateObj) : null;
   }
   get data() {
-    return JSON.parse(JSON.stringify(this.machineData));
+    return this.machineData;
   }
   private readonly states: State[] = [];
   private currentStateObj: State | null = null;
   private initialState: string | undefined;
-  private machineData;
+  private machineData: T;
 
   registerState(state: State<T>, setAsInitial?: boolean): void;
   registerState(stateName: string, setAsInitial?: boolean): void;
@@ -103,7 +104,7 @@ export class StateMachine<T extends object = any> implements IStateMachine<T> {
     if (!!action) {
       const result = await action({ machine: this, previousState }, ...args);
       if (!!result.data) {
-        this.machineData = result.data;
+        this.mapData(result.data);
       }
       if (!!result.nextState && result.nextState !== stateObj.name) {
         const success = await this.trigger(result.nextState);
@@ -122,6 +123,10 @@ export class StateMachine<T extends object = any> implements IStateMachine<T> {
 
   getStates(): State[] {
     return this.states.map(cloneState);
+  }
+
+  private mapData(data: any) {
+    this.machineData = JSON.parse(JSON.stringify(data));
   }
 
   private registerStateInternal(state: State, setAsInitial: boolean) {

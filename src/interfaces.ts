@@ -7,11 +7,11 @@ export interface StateActionCanTriggerContext {
   machine: IStateMachine;
 }
 
-export interface StateAction<T extends object = any> {
+export interface StateAction<T = any> {
   (context: StateActionContext, ...args: any[]): Promise<StateActionResult<T>>;
 }
 
-export interface StateActionResult<T extends object = any> {
+export interface StateActionResult<T = any> {
   nextState: string;
   data?: T;
 }
@@ -22,14 +22,14 @@ export interface StateActionCanTrigger {
 
 export type AllowedFrom = string[] | 'any';
 
-export interface State<T extends object = any> {
+export interface State<T = any> {
   name: string;
   allowedFrom: string[] | 'any';
   action?: StateAction<T>;
   canTrigger?: StateActionCanTrigger;
 }
 
-export interface IStateMachine<T extends object = any> {
+export interface IStateMachine<T = any> {
   name: string;
   currentState: string;
   currentStateObject: State | null;
