@@ -2,18 +2,18 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/master/containers/typescript-node-lts
 {
   "name": "Node.js & TypeScript",
-  "build": {
-    "dockerfile": "Dockerfile",
-    // Update 'VARIANT' to pick a Node version: 16, 14, 12.
-    // Append -bullseye or -buster to pin to an OS version.
-    // Use -bullseye variants on local on arm64/Apple Silicon.
-    "args": {
-      "VARIANT": "16-bullseye"
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:0-18",
+
+  "customizations": {
+    "vscode": {
+      // Add the IDs of extensions you want installed when the container is created in the array below.
+      "extensions": [
+        "dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "eamodio.gitlens"
+      ],
+      // Set *default* container specific settings.json values on container create.
+      "settings": {}
     }
   },
-
-  // Set *default* container specific settings.json values on container create.
-  "settings": {},
 
   // Uncomment the next line if you want to publish any ports.
   // "appPort": [],
@@ -26,8 +26,6 @@
   // and USER_GID in .devcontainer/Dockerfile to match your user if not 1000.
   // "runArgs": [ "-u", "node" ],
 
-  // Add the IDs of extensions you want installed when the container is created in the array below.
-  "extensions": ["dbaeumer.vscode-eslint", "octref.vetur", "esbenp.prettier-vscode", "eamodio.gitlens"],
   "remoteUser": "node",
   "features": {
     "docker-from-docker": "latest",

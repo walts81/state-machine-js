@@ -11,7 +11,9 @@
     "noImplicitAny": false,
     "noImplicitThis": false,
     "allowJs": true,
-    "lib": ["dom", "es2015", "es2015.promise"]
+    "lib": ["dom", "es2015", "es2015.promise"],
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["jest", "jest-extended"]
   },
   "exclude": ["node_modules", "lib/**/*.ts", "lib/**/*.js"]
 }

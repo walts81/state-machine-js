@@ -1,5 +1,3 @@
-import { expect } from 'chai';
-import 'mocha';
 import { createState } from './state';
 import { StateMachine } from './machine';
 import { StateAction } from './interfaces';
@@ -9,32 +7,32 @@ describe('StateMachine', () => {
     const machine = new StateMachine('test');
     const allowedFrom = allowState2 ? ['state1'] : [];
     machine.registerState('state1', setState1Initial);
-    if (!!action) machine.registerStateWithAction('state2', allowedFrom, action);
+    if (!!action) machine.registerState('state2', allowedFrom, action);
     else machine.registerState('state2', allowedFrom);
     machine.registerState('state3', ['state2'], false);
 
     machine.registerState('state4');
     machine.registerState('state5', ['state4'], false);
 
-    machine.registerStateWithAction('state6', () => Promise.resolve({ nextState: '' }));
-    machine.registerStateWithAction('state7', ['state6'], () => Promise.resolve({ nextState: '' }));
-    machine.registerStateWithAction('state8', () => Promise.resolve({ nextState: '' }));
-    machine.registerStateWithAction(
+    machine.registerState('state6', () => Promise.resolve({ nextStateName: '' }));
+    machine.registerState('state7', ['state6'], () => Promise.resolve({ nextStateName: '' }));
+    machine.registerState('state8', () => Promise.resolve({ nextStateName: '' }));
+    machine.registerState(
       'state9',
-      () => Promise.resolve({ nextState: '' }),
+      () => Promise.resolve({ nextStateName: '' }),
       () => Promise.resolve(false),
       false
     );
-    machine.registerStateWithAction(
+    machine.registerState(
       'state10',
-      () => Promise.resolve({ nextState: '' }),
+      () => Promise.resolve({ nextStateName: '' }),
       () => Promise.resolve(false),
       false
     );
-    machine.registerStateWithAction(
+    machine.registerState(
       'state11',
       ['state10'],
-      () => Promise.resolve({ nextState: '' }),
+      () => Promise.resolve({ nextStateName: '' }),
       () => Promise.resolve(false),
       false
     );
@@ -51,14 +49,14 @@ describe('StateMachine', () => {
       } catch {
         errorThrown = true;
       }
-      expect(errorThrown).to.be.true;
+      expect(errorThrown).toBeTrue();
     });
 
     it('should start at specified initial state', async () => {
       const machine = createMachine(true, false);
       await machine.start();
-      const currentState = machine.currentState;
-      expect(currentState).to.eq('state1');
+      const currentState = machine.currentStateName;
+      expect(currentState).toStrictEqual('state1');
     });
 
     it('should throw error when state already registered as initial', async () => {
@@ -69,7 +67,7 @@ describe('StateMachine', () => {
       } catch {
         errorThrown = true;
       }
-      expect(errorThrown).to.be.true;
+      expect(errorThrown).toBeTrue();
     });
   });
 
@@ -80,42 +78,42 @@ describe('StateMachine', () => {
       await machine.start();
       await machine.trigger('state1');
       await machine.trigger('state2');
-      expect(machine.currentState).to.eq('state2');
+      expect(machine.currentStateName).toStrictEqual('state2');
     });
 
     it('should allow moving to state when previous state is null', async () => {
       const machine = createMachine(false, false);
       await machine.trigger('state1');
-      const currentState = machine.currentState;
-      expect(currentState).to.eq('state1');
+      const currentState = machine.currentStateName;
+      expect(currentState).toStrictEqual('state1');
     });
 
     it('should not allow moving to state when previous state is NOT in allowedFrom', async () => {
       const machine = createMachine(false, false);
       await machine.trigger('state1');
       await machine.trigger('state2');
-      const currentState = machine.currentState;
-      expect(currentState).to.eq('state1');
+      const currentState = machine.currentStateName;
+      expect(currentState).toStrictEqual('state1');
     });
 
     it('should not allow moving to state registered with allowedFrom none', async () => {
       const machine = createMachine(true, false);
       await machine.start();
       const result = await machine.trigger('state_from_none');
-      expect(result).to.be.false;
+      expect(result).toBeFalse();
     });
 
     it('should return true when state advanced successfully', async () => {
       const machine = createMachine(false, false);
       const result = await machine.trigger('state1');
-      expect(result).to.be.true;
+      expect(result).toBeTrue();
     });
 
     it('should return false when state did NOT advance successfully', async () => {
       const machine = createMachine(false, false);
       await machine.trigger('state1');
       const result = await machine.trigger('state2');
-      expect(result).to.be.false;
+      expect(result).toBeFalse();
     });
 
     it('should run registered action when advancing state', async () => {
@@ -124,24 +122,24 @@ describe('StateMachine', () => {
       const machine = createMachine(false, true, ctx => {
         counter++;
         calledWithMachine = ctx.machine === machine;
-        return Promise.resolve({ nextState: '' });
+        return Promise.resolve({ nextStateName: '' });
       });
       await machine.trigger('state1');
       await machine.trigger('state2');
-      expect(counter).to.eq(1);
-      expect(calledWithMachine).to.be.true;
+      expect(counter).toStrictEqual(1);
+      expect(calledWithMachine).toBeTrue();
     });
 
     it(`should advance to state returned from state's registered action`, async () => {
-      const machine = createMachine(false, true, () => Promise.resolve({ nextState: 'state3' }));
+      const machine = createMachine(false, true, () => Promise.resolve({ nextStateName: 'state3' }));
       await machine.trigger('state1');
       await machine.trigger('state2');
-      const currentState = machine.currentState;
-      expect(currentState).to.eq('state3');
+      const currentState = machine.currentStateName;
+      expect(currentState).toStrictEqual('state3');
     });
 
     it(`should throw error when a state's action returns an invalid state`, async () => {
-      const machine = createMachine(false, true, () => Promise.resolve({ nextState: 'state99' }));
+      const machine = createMachine(false, true, () => Promise.resolve({ nextStateName: 'state99' }));
       await machine.trigger('state1');
       let errorThrown = false;
       try {
@@ -149,7 +147,7 @@ describe('StateMachine', () => {
       } catch {
         errorThrown = true;
       }
-      expect(errorThrown).to.be.true;
+      expect(errorThrown).toBeTrue();
     });
 
     it('should use specified args to run the action', async () => {
@@ -157,57 +155,62 @@ describe('StateMachine', () => {
       const arg1 = { data: 'test-1' };
       const arg2 = { data: 'test-2' };
       let calledWithPayload = false;
-      machine.registerStateWithAction('test', (ctx, a, b) => {
+      machine.registerState('test', (ctx, a, b) => {
         calledWithPayload = a === arg1 && b === arg2;
-        return Promise.resolve({ nextState: '' });
+        return Promise.resolve({ nextStateName: '' });
       });
       await machine.trigger('test', arg1, arg2);
-      expect(calledWithPayload).to.be.true;
+      expect(calledWithPayload).toBeTrue();
     });
 
     it(`should return false when state's canTrigger returns false`, async () => {
       const machine = createMachine(false, false);
-      machine.registerStateWithAction(
+      machine.registerState(
         'test',
-        () => Promise.resolve({ nextState: '' }),
+        () => Promise.resolve({ nextStateName: '' }),
         () => Promise.resolve(false)
       );
       const result = await machine.trigger('test');
-      expect(result).to.be.false;
+      expect(result).toBeFalse();
     });
 
     it(`should not run state's action when state's canTrigger returns false`, async () => {
       const machine = createMachine(false, false);
       let actionTriggered = false;
-      machine.registerStateWithAction(
+      machine.registerState(
         'test',
         () => {
           actionTriggered = true;
-          return Promise.resolve({ nextState: '' });
+          return Promise.resolve({ nextStateName: '' });
         },
         () => Promise.resolve(false)
       );
       await machine.trigger('test');
-      expect(actionTriggered).to.be.false;
+      expect(actionTriggered).toBeFalse();
     });
 
     it(`should not advance to state when state's canTrigger returns false`, async () => {
       const machine = createMachine(false, false);
-      machine.registerStateWithAction(
+      machine.registerState(
         'test',
-        () => Promise.resolve({ nextState: '' }),
+        () => Promise.resolve({ nextStateName: '' }),
         () => Promise.resolve(false)
       );
       await machine.trigger('test');
-      expect(machine.currentState).to.eq('');
+      expect(machine.currentStateName).toStrictEqual('');
     });
 
-    it(`should set machine's data to data returned from state's action`, async () => {
+    it(`should pass data returned from state's action to following action`, async () => {
       const machine = createMachine(false, false);
       const dataToReturn = { data: 'returned data' };
-      machine.registerStateWithAction('test', () => Promise.resolve({ nextState: '', data: dataToReturn }));
+      machine.registerState('test', () => Promise.resolve({ nextStateName: 'test100', data: dataToReturn }));
+      let returnedData: any = null;
+      machine.registerState('test100', ['test'], (ctx, data) => {
+        returnedData = data;
+        return Promise.resolve({ nextStateName: '' });
+      });
       await machine.trigger('test');
-      expect(machine.data).to.eql(dataToReturn);
+      expect(returnedData).toEqual(dataToReturn);
     });
   });
 
@@ -215,14 +218,14 @@ describe('StateMachine', () => {
     it('should return false when state does not exist', async () => {
       const machine = createMachine(false, false);
       const result = await machine.canTrigger('state_not_exists');
-      expect(result).to.be.false;
+      expect(result).toBeFalse();
     });
 
     it('should return false when current state is NOT in allowedFrom', async () => {
       const machine = createMachine(false, false);
       await machine.trigger('state1');
       const result = await machine.canTrigger('state2');
-      expect(result).to.be.false;
+      expect(result).toBeFalse();
     });
 
     it('should return true when current state is in allowedFrom', async () => {
@@ -230,29 +233,29 @@ describe('StateMachine', () => {
       await machine.trigger('state1');
       (machine as any).states[1].canTrigger = undefined;
       const result = await machine.canTrigger('state2');
-      expect(result).to.be.true;
+      expect(result).toBeTrue();
     });
 
     it(`should return false when state's canTrigger returns false`, async () => {
       const machine = createMachine(false, false);
-      machine.registerStateWithAction(
+      machine.registerState(
         'test',
-        () => Promise.resolve({ nextState: '' }),
+        () => Promise.resolve({ nextStateName: '' }),
         () => Promise.resolve(false)
       );
       const result = await machine.canTrigger('test');
-      expect(result).to.be.false;
+      expect(result).toBeFalse();
     });
 
     it(`should return true when state's canTrigger returns true`, async () => {
       const machine = createMachine(false, false);
-      machine.registerStateWithAction(
+      machine.registerState(
         'test',
-        () => Promise.resolve({ nextState: '' }),
+        () => Promise.resolve({ nextStateName: '' }),
         () => Promise.resolve(true)
       );
       const result = await machine.canTrigger('test');
-      expect(result).to.be.true;
+      expect(result).toBeTrue();
     });
 
     it('should use specified args to run the action', async () => {
@@ -260,16 +263,16 @@ describe('StateMachine', () => {
       const arg1 = { data: 'test-1' };
       const arg2 = { data: 'test-2' };
       let calledWithPayload = false;
-      machine.registerStateWithAction(
+      machine.registerState(
         'test',
-        () => Promise.resolve({ nextState: '' }),
+        () => Promise.resolve({ nextStateName: '' }),
         (ctx, a, b) => {
           calledWithPayload = a === arg1 && b === arg2;
           return Promise.resolve(true);
         }
       );
       await machine.canTrigger('test', arg1, arg2);
-      expect(calledWithPayload).to.be.true;
+      expect(calledWithPayload).toBeTrue();
     });
   });
 
@@ -278,10 +281,11 @@ describe('StateMachine', () => {
       const machine = createMachine(false, false);
       const states = (machine as any).states;
       const result = machine.getStates();
-      expect(result).not.to.eq(states);
+      expect(result).not.toStrictEqual(states); // !==
       for (let i = 0; i < result.length; i++) {
-        expect(result[i]).not.to.eq(states[i]);
-        expect(result[i]).to.eql(states[i]);
+        expect(result[i]).not.toBe(states[i]); // !==
+        expect(result[i].name).toEqual(states[i].name); // ===
+        expect(result[i].allowedFrom).toEqual(states[i].allowedFrom); // ==
       }
     });
   });
@@ -291,14 +295,15 @@ describe('StateMachine', () => {
       const machine = createMachine(true, false);
       await machine.start();
       const state = (machine as any).currentStateObj;
-      expect(machine.currentStateObject).not.to.eq(state);
-      expect(machine.currentStateObject).to.eql(state);
+      expect(machine.currentState).not.toBe(state); // !==
+      expect(machine.currentState?.name).toStrictEqual(state.name); // ===
+      expect(machine.currentState?.allowedFrom).toEqual(state.allowedFrom); // ==
     });
 
     it('should return null when no current state', async () => {
       const machine = createMachine(false, false);
       await machine.start();
-      expect(machine.currentStateObject).to.be.null;
+      expect(machine.currentState).toBeNull();
     });
   });
 });
