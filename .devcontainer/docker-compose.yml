@@ -1,0 +1,19 @@
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/typescript-node:0-18
+    volumes:
+      - ../../:/workspaces:cached
+    command: sleep infinity
+    networks:
+      network1:
+        ipv4_address: 10.4.2.10
+    dns:
+      - 10.4.16.189
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+
+networks:
+  network1:
+    name: macvlan
+    external: true

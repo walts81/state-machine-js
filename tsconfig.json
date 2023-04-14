@@ -15,5 +15,6 @@
     "typeRoots": ["./node_modules/@types"],
     "types": ["jest", "jest-extended"]
   },
-  "exclude": ["node_modules", "lib/**/*.ts", "lib/**/*.js"]
+  "include": ["src/"],
+  "exclude": ["node_modules", "lib/**/*.ts", "lib/**/*.js", "src/**/*.spec.ts"]
 }

@@ -2,14 +2,15 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/master/containers/typescript-node-lts
 {
   "name": "Node.js & TypeScript",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:0-18",
+  //"image": "mcr.microsoft.com/devcontainers/typescript-node:0-18",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
   "customizations": {
     "vscode": {
       // Add the IDs of extensions you want installed when the container is created in the array below.
-      "extensions": [
-        "dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "eamodio.gitlens"
-      ],
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "eamodio.gitlens"],
       // Set *default* container specific settings.json values on container create.
       "settings": {}
     }

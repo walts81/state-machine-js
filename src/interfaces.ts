@@ -35,8 +35,8 @@ export interface IStateMachine<MachineData = any> {
   data: MachineData;
 
   registerState<StateData = any>(state: State<MachineData, StateData>, setAsInitial?: boolean): void;
-  registerState<StateData = any>(stateName: string, setAsInitial?: boolean): void;
-  registerState<StateData = any>(stateName: string, allowedFrom?: AllowedFrom, setAsInitial?: boolean): void;
+  registerState(stateName: string, setAsInitial?: boolean): void;
+  registerState(stateName: string, allowedFrom?: AllowedFrom, setAsInitial?: boolean): void;
   registerState<StateData = any>(
     stateName: string,
     action: StateAction<MachineData, StateData>,
