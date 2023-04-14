@@ -47,21 +47,21 @@ const machine = new StateMachine('my-state-machine');
 
 > <h3>Register states</h3>
 >
-> Use the machine's `registerState` and `registerStateWithAction` methods to add states
+> Use the machine's `registerState` method to add states
 
 ```ts
 machine.registerState('state1', 'none', true);
 
-machine.registerStateWithAction('state2', ['state1', 'state3'], async ctx => {
-  if (ctx.previousState === 'state1') {
+machine.registerState('state2', ['state1', 'state3'], async ctx => {
+  if (ctx.previousStateName === 'state1') {
     // do something
-  } else if (ctx.previousState === 'state3') {
+  } else if (ctx.previousStateName === 'state3') {
     // do something else
   }
   return '';
 });
 
-machine.registerStateWithAction(
+machine.registerState(
   'state3',
   'any',
   async ctx => {
@@ -107,7 +107,7 @@ await machine.trigger('state1');
 ## Object Definitions
 
 ```ts
-interface State<T = any> {
+interface State<MachineData = any, StateData = any> {
   /***
    * The name of the state
    */
@@ -137,7 +137,7 @@ interface State<T = any> {
    *   Otherwise the nextState value can be undefined, empty string or the same state
    *     name to remain on the same state
    */
-  action?: (context: StateActionContext, ...args: any[]) => Promise<StateActionResult<T>>;
+  action?: (context: StateActionContext<MachineData>, ...args: any[]) => Promise<StateActionResult<StateData>>;
 
   /***
    * Optional action to run to determine if the state can become active.
@@ -146,40 +146,36 @@ interface State<T = any> {
    * Return a promise that resolves true or false...
    *   true if the state can become active, false if it cannot.
    */
-  canTrigger?: (context: StateActionCanTriggerContext, ...args: any[]) => Promise<boolean>;
+  canTrigger?: (context: StateActionContext<MachineData>, ...args: any[]) => Promise<boolean>;
 }
 
-interface IStateMachine<T = any> {
+interface IStateMachine<MachineData = any> {
   name: string;
-  currentState: string;
-  currentStateObject: State<T> | null;
-  data: T;
+  currentStateName: string;
+  currentState: State<MachineData> | null;
+  data: MachineData;
 
-  registerState(stateOrName: State<T> | string, allowedFrom?: string[] | 'none' | 'any', setAsInitial?: boolean): void;
-  registerStateWithAction(
-    stateName: string,
+  registerState<StateData = any>(
+    stateOrName: State<MachineData, StateData> | string,
     allowedFrom?: string[] | 'none' | 'any',
-    action?: (ctx: StateActionContext<T>, ...args: any[]) => Promise<StateActionResult<T>>,
-    canTrigger?: (ctx: StateActionCanTriggerContext<T>, ...args: any[]) => Promise<boolean>
+    action?: (ctx: StateActionContext<MachineData>, ...args: any[]) => Promise<StateActionResult<StateData>>,
+    canTrigger?: (ctx: StateActionContext<MachineData>, ...args: any[]) => Promise<boolean>,
+    setAsInitial?: boolean
   ): void;
   canTrigger(state: string, ...args: any[]): Promise<boolean>;
   trigger(state: string, ...args: any[]): Promise<boolean>;
   start(): Promise<void>;
-  getStates(): State<T>[];
+  getStates(): State<MachineData>[];
 }
 
-interface StateActionContext<T = any> {
-  machine: IStateMachine<T>;
-  previousState: string;
+interface StateActionContext<MachineData = any> {
+  machine: IStateMachine<MachineData>;
+  previousStateName: string;
 }
 
-interface StateActionCanTriggerContext<T = any> {
-  machine: IStateMachine<T>;
-}
-
-interface StateActionResult<T = any> {
-  nextState: string;
-  data?: T;
+interface StateActionResult<StateData = any> {
+  nextStateName: string;
+  data?: StateData;
 }
 ```
 
@@ -196,7 +192,7 @@ const maxIdleInSeconds = 600000;
 let idleCounter = 0;
 let idleRunning = false;
 
-machine.registerStateWithAction(
+machine.registerState(
   'idle',
   ['active'],
   async ctx => {
@@ -204,49 +200,47 @@ machine.registerStateWithAction(
       idleRunning = true;
       const hndl = setInterval(() => {
         if (++idleCounter === maxIdleInSeconds) {
-          ctx.machine.trigger('logout');
           clearInterval(hndl);
           idleRunning = false;
+          ctx.machine.trigger('logout');
         }
       }, 1000);
     }
-    return { nextState: '' };
+    return { nextStateName: '' };
   }
 );
 
-machine.registerStateWithAction('active', () => {
+machine.registerState('active', () => {
   idleCounter = 0;
-  return new Promise(resolve => setTimeout(() => resolve({ nextState: 'idle' }), 500));
+  return new Promise(resolve => setTimeout(() => resolve({ nextStateName: 'idle' }), 500));
 });
 
-machine.registerStateWithAction(
+machine.registerState(
   'logout',
   ['active', 'idle', 'login']
   async ctx => {
     // if coming from login state, it was because login failed
     // so no need to perform logout logic
-    if (!!ctx.previousState && ctx.previousState !== 'login') {
+    if (!!ctx.previousStateName && ctx.previousStateName !== 'login') {
       // logout implementation here
     }
     return {
-      nextState: '',
-      data: {
-        username: ''
-      }
+      nextStateName: '',
+      data: { username: '' }
     };
   },
   true
 );
 
-machine.registerStateWithAction(
+machine.registerState(
   'login',
   ['logout'],
-  async (ctx: StateActionContext, username: string, password: string) => {
+  async (_, username: string, password: string) => {
     // login implementation here
     const loginSuccess = password === 'password'; // <-- do real login here
     return loginSuccess
-      ? { nextState: 'active', data: { username } }
-      : { nextState: 'logout' };
+      ? { nextStateName: 'active', data: { username } }
+      : { nextStateName: 'logout' };
   }
 );
 

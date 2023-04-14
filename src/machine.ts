@@ -143,10 +143,9 @@ export class StateMachine<MachineData = any> implements IStateMachine<MachineDat
   }
 
   private getActionContext() {
-    const previousState = this.currentStateObj;
     const previousStateName = this.currentStateName;
 
-    return { machine: this, previousState, previousStateName };
+    return { machine: this, previousStateName };
   }
 
   private mapData(data: any) {

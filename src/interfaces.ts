@@ -1,7 +1,6 @@
 export interface StateActionContext<MachineData = any> {
   machine: IStateMachine<MachineData>;
   previousStateName: string;
-  previousState: State<MachineData> | null;
 }
 
 export interface StateActionResult<StateData = any> {
