@@ -1,9 +1,10 @@
-const { join, resolve } = require('path');
+import { Config } from 'jest';
+import { join, resolve } from 'path';
 const root = resolve(__dirname, './');
 const src = join(root, '/src');
 
-module.exports = {
-  preset: 'ts-jest/presets/default-esm',
+const config: Config = {
+  preset: 'ts-jest',
   coverageProvider: 'v8',
   transform: {
     '^.+\\.ts$': 'ts-jest',
@@ -13,5 +14,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)': `${src}/$1`,
   },
-  setupFilesAfterEnv: ['jest-extended/all'],
+  setupFilesAfterEnv: ['jest-extended/all', './jest-setup-tests.ts'],
 };
+
+export default config;

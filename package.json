@@ -6,6 +6,7 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "npm run clean-build && tsc",
+    "build:debug": "npm run clean-build && tsc --sourceMap",
     "test": "jest",
     "test:cov": "npm run clean-coverage && jest --coverage",
     "coverage": "npm run test:cov && cat ./coverage/lcov.info | coveralls",

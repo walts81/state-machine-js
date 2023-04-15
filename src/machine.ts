@@ -6,58 +6,60 @@ let currentActionNumber = 0;
 export class StateMachine<MachineData = any> implements IStateMachine<MachineData> {
   constructor(public name: string, data?: MachineData) {
     const dataToUse = data || ({} as any);
-    this.mapData(dataToUse);
+    this.data = dataToUse;
   }
 
   get currentStateName() {
     return this.currentStateObj?.name || '';
   }
-  get currentState() {
-    return !!this.currentStateObj ? cloneState(this.currentStateObj) : null;
-  }
-  get data() {
-    return this.machineData;
-  }
+  data: MachineData;
+
   private readonly states: State<MachineData>[] = [];
   private currentStateObj: State<MachineData> | null = null;
   private initialState: string | undefined;
-  private machineData: MachineData;
   private actionQueue: number[] = [];
 
-  registerState<StateData = any>(state: State<MachineData, StateData>, setAsInitial?: boolean): void;
-  registerState(stateName: string, setAsInitial?: boolean): void;
-  registerState(stateName: string, allowedFrom: AllowedFrom, setAsInitial?: boolean): void;
+  registerState<StateData = any>(
+    state: State<MachineData, StateData>,
+    setAsInitial?: boolean
+  ): State<MachineData, StateData>;
+  registerState<StateData = any>(stateName: string, setAsInitial?: boolean): State<MachineData, StateData>;
+  registerState<StateData = any>(
+    stateName: string,
+    allowedFrom: AllowedFrom,
+    setAsInitial?: boolean
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     action: StateAction<MachineData, StateData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     allowedFrom: AllowedFrom,
     action: StateAction<MachineData, StateData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     action: StateAction<MachineData, StateData>,
     canTrigger: StateActionCanTrigger<MachineData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     allowedFrom: AllowedFrom,
     action: StateAction<MachineData, StateData>,
     canTrigger: StateActionCanTrigger<MachineData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateOrName: State<MachineData, StateData> | string,
     arg2?: boolean | AllowedFrom | StateAction<MachineData, StateData> | undefined,
     arg3?: boolean | StateAction<MachineData, StateData> | StateActionCanTrigger<MachineData> | undefined,
     arg4?: boolean | StateActionCanTrigger<MachineData> | undefined,
     arg5?: boolean | undefined
-  ): void {
+  ): State<MachineData, StateData> {
     let state = stateOrName as State<MachineData, StateData>;
     const setAsInitial = arg2 === true || arg3 === true || arg4 === true || arg5 === true;
     if (typeof stateOrName === 'string') {
@@ -76,10 +78,11 @@ export class StateMachine<MachineData = any> implements IStateMachine<MachineDat
       state = createState<MachineData, StateData>(stateOrName, allowedFrom, action, canTrigger);
     }
     this.addState(state, setAsInitial);
+    return state;
   }
 
   async canTrigger(stateName: string, ...args: any[]) {
-    const newState = this.getState(stateName);
+    const newState = this.getInternalState(stateName);
     const newStateExists = !!newState;
     if (!newStateExists) return false;
 
@@ -99,9 +102,9 @@ export class StateMachine<MachineData = any> implements IStateMachine<MachineDat
     const ok = await this.canTrigger(stateName, ...args);
     if (!ok) return false;
 
-    const stateObj = this.getState(stateName);
+    const stateObj = this.getInternalState(stateName);
     this.setCurrentState(stateObj);
-    const action: StateAction = stateObj.action as any;
+    const action = stateObj?.action;
 
     let success = true;
     let attemptedNextState = '';
@@ -138,7 +141,12 @@ export class StateMachine<MachineData = any> implements IStateMachine<MachineDat
     return this.states.map(cloneState);
   }
 
-  private setCurrentState(state: State) {
+  getState<StateData = any>(stateName: string): State<MachineData, StateData> | null {
+    const state = this.getInternalState<StateData>(stateName);
+    return !!state ? cloneState(state) : null;
+  }
+
+  private setCurrentState(state: State | null) {
     this.currentStateObj = state;
   }
 
@@ -146,10 +154,6 @@ export class StateMachine<MachineData = any> implements IStateMachine<MachineDat
     const previousStateName = this.currentStateName;
 
     return { machine: this, previousStateName };
-  }
-
-  private mapData(data: any) {
-    this.machineData = JSON.parse(JSON.stringify(data));
   }
 
   private addState<StateData = any>(state: State<MachineData, StateData>, setAsInitial: boolean) {
@@ -162,9 +166,10 @@ export class StateMachine<MachineData = any> implements IStateMachine<MachineDat
     }
   }
 
-  private getState(stateName: string): State<MachineData> {
+  private getInternalState<StateData = any>(stateName: string): State<MachineData, StateData> | null {
     const states = [...this.states];
     const filtered = states.filter(x => x.name === stateName);
-    return filtered.length > 0 ? filtered[0] : (null as any);
+    const result = filtered.length > 0 ? filtered[0] : null;
+    return result;
   }
 }

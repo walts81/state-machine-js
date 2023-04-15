@@ -28,41 +28,48 @@ export interface State<MachineData = any, StateData = any> {
 }
 
 export interface IStateMachine<MachineData = any> {
-  name: string;
-  currentStateName: string;
-  currentState: State<MachineData> | null;
+  readonly name: string;
+  readonly currentStateName: string;
   data: MachineData;
 
-  registerState<StateData = any>(state: State<MachineData, StateData>, setAsInitial?: boolean): void;
-  registerState(stateName: string, setAsInitial?: boolean): void;
-  registerState(stateName: string, allowedFrom?: AllowedFrom, setAsInitial?: boolean): void;
+  registerState<StateData = any>(
+    state: State<MachineData, StateData>,
+    setAsInitial?: boolean
+  ): State<MachineData, StateData>;
+  registerState<StateData = any>(stateName: string, setAsInitial?: boolean): State<MachineData, StateData>;
+  registerState<StateData = any>(
+    stateName: string,
+    allowedFrom?: AllowedFrom,
+    setAsInitial?: boolean
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     action: StateAction<MachineData, StateData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     allowedFrom: AllowedFrom,
     action: StateAction<MachineData, StateData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     action: StateAction<MachineData, StateData>,
     canTrigger: StateActionCanTrigger<MachineData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
   registerState<StateData = any>(
     stateName: string,
     allowedFrom: AllowedFrom,
     action: StateAction<MachineData, StateData>,
     canTrigger: StateActionCanTrigger<MachineData>,
     setAsInitial?: boolean
-  ): void;
+  ): State<MachineData, StateData>;
 
   canTrigger(state: string, ...args: any[]): Promise<boolean>;
   trigger(state: string, ...args: any[]): Promise<boolean>;
   start(): Promise<void>;
   getStates(): State<MachineData>[];
+  getState<StateData = any>(stateName: string): State<MachineData, StateData> | null;
 }

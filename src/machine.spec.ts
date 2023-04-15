@@ -290,20 +290,23 @@ describe('StateMachine', () => {
     });
   });
 
-  describe('currentStateObject', () => {
-    it('should return cloned current state', async () => {
+  describe('getState', () => {
+    it('should return cloned state', async () => {
       const machine = createMachine(true, false);
       await machine.start();
-      const state = (machine as any).currentStateObj;
-      expect(machine.currentState).not.toBe(state); // !==
-      expect(machine.currentState?.name).toStrictEqual(state.name); // ===
-      expect(machine.currentState?.allowedFrom).toEqual(state.allowedFrom); // ==
+      const currentState = (machine as any).currentStateObj;
+
+      const state = machine.getState('state1');
+      expect(state).not.toBe(currentState); // !==
+      expect(state?.name).toStrictEqual(currentState.name); // ===
+      expect(state?.allowedFrom).toEqual(currentState.allowedFrom); // ==
     });
 
-    it('should return null when no current state', async () => {
+    it('should return null when state not found', async () => {
       const machine = createMachine(false, false);
       await machine.start();
-      expect(machine.currentState).toBeNull();
+      const state = machine.getState('non-existent-state');
+      expect(state).toBeNull();
     });
   });
 });
